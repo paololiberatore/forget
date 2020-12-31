@@ -1,0 +1,20 @@
+#!/bin/sh
+
+echo "file                            set/fork set/singlehead"
+echo "-------------------------------------------------------"
+
+for F in *.py;
+do
+	printf "%-30s " $F
+	../forget-set.py $F  | grep -v '^#' | sort -u > result-set
+	../forget-fork.py $F | grep -v '^#' | sort -u > result-fork
+	../forget-singlehead.py $F | grep -v '^# ' | sort -u > result-single
+	diff result-set result-fork && \
+		echo -n " OK      " || echo -n " FAIL    "
+	grep -q WARNING result-single && echo " N/A" && continue
+	grep -v '##' result-single | diff -q result-set - && \
+		echo " OK" || echo " FAIL"
+done
+
+rm result-set result-fork result-single
+

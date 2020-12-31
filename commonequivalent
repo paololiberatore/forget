@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+# check common equivalence of two formulae
+#
+# example:
+# commonequivalent 'a->b b->c c->d' 'a->x a->y xy->d'
+# commonequivalent 'a->b b->c c->d f->e' 'e->f a->x a->y xy->d f->e'
+
+
+# args
+
+[ $# -lt 2 ] && echo "arguments: two formulae" && exit 1
+A="$1"
+B="$2"
+
+# common variables
+
+echo $A | tr -d '> \n-' | sed 's,.,&\n,g' | sort -u > first-$$
+V=$(echo $B | tr -d '> \n-' | sed 's,.,&\n,g' | sort -u | \
+    join - first-$$ | tr -d '\n')
+rm first-$$
+echo "common variables: $V"
+
+# check whether B |= forget(A,V)
+
+forget-fork.py -f $V $A | \
+grep -v '[= ]' | \
+{
+	while read F;
+	do
+		echo -n "$B   |=   $F"
+		entail.py $F $B && echo "   no" && exit 1
+		echo "   yes"
+	done
+	exit 0;
+}
+
+[ $? = 1 ] && echo "no" && exit
+
+# check whether A |= forget(B,V)
+
+forget-fork.py -f $V $B | \
+grep -v '[= ]' | \
+{
+	while read F;
+	do
+		echo -n "$A   |=   $F"
+		entail.py $F $A && echo "   no" && exit 1
+		echo "   yes"
+	done
+	exit 0;
+}
+
+[ $? = 1 ] && echo "no" && exit
+
+echo yes
+
